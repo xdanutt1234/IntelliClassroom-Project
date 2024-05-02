@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login with Google</title>
+</head>
+<body>
+  <h1>Login with Google</h1>
+  <button onclick="loginWithGoogle()">Login with Google</button>
+
+  <script>
+    // Function to initiate Google OAuth login
+    async function loginWithGoogle() {
+      // Request environment variables from preload script
+      const envVariables = await window.ipcRenderer.invoke('get-env-variables');
+
+      // Construct OAuth URL with client ID and redirect URI from environment variables
+      const clientId = envVariables.GOOGLE_CLIENT_ID;
+      const redirectUri = 'http://localhost'; // Adjust this URL as per your setup
+      const oauthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+        'client_id=' + encodeURIComponent(clientId) + '&' +
+        'redirect_uri=' + encodeURIComponent(redirectUri) + '&' +
+        'response_type=code&' +
+        'scope=https://www.googleapis.com/auth/userinfo.profile';
+
+      // Open a new window to initiate OAuth flow
+      const authWindow = window.open(oauthUrl);
+
+      // Listen for messages from the OAuth window
+      window.addEventListener('message', (event) => {
+        // If the message contains an access token, handle it
+        if (event.data && event.data.type === 'oauth-token') {
+          const accessToken = event.data.accessToken;
+
+          // Do something with the access token (e.g., send it to the Electron app)
+          sendAccessTokenToElectron(accessToken);
+
+          // Close the OAuth window
+          authWindow.close();
+        }
+      });
+    }
+
+    // Function to send the access token to the Electron app
+    function sendAccessTokenToElectron(accessToken) {
+      // Send a message to the Electron main process with the access token
+      window.ipcRenderer.send('oauth-token', { accessToken });
+    }
+  </script>
+</body>
+</html>
